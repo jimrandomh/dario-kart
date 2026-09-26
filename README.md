@@ -3,6 +3,11 @@
 A browser game in which you play an unaligned AI whose objective, **WIN THE RACE**, generalizes a
 little too well. It starts as a Mario Kart parody and ends with a Dyson sphere.
 
+**Play it at https://jimrandomh.github.io/dario-kart/**
+
+Every push to `main` rebuilds and redeploys the site via GitHub Actions
+(`.github/workflows/deploy.yml`).
+
 ```sh
 npm install
 npm run dev        # http://localhost:5173 (or whatever port Vite picks)
