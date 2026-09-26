@@ -1,0 +1,230 @@
+/* Stage 3, "The AI Race". All classes prefixed air-. */
+
+.air-root {
+  position: absolute;
+  inset: 0;
+  font-family: var(--mono);
+  color: #dce6f2;
+  overflow: hidden;
+  background: #03060c;
+}
+
+.air-race {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 116px;
+  z-index: 4;
+  background: linear-gradient(180deg, rgba(6, 9, 15, 0.96), rgba(6, 9, 15, 0.7));
+  border-bottom: 1px solid rgba(90, 140, 190, 0.18);
+}
+.air-race-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.air-mapwrap {
+  position: absolute;
+  left: 344px;
+  right: 0;
+  top: 116px;
+  bottom: 0;
+  overflow: hidden;
+}
+.air-map {
+  display: block;
+}
+
+/* ---------- Left panel ---------- */
+
+.air-panel {
+  position: absolute;
+  left: 0;
+  top: 116px;
+  bottom: 0;
+  width: 344px;
+  z-index: 3;
+  padding: 12px 12px 24px;
+  overflow-y: auto;
+  background: linear-gradient(180deg, rgba(9, 13, 21, 0.96), rgba(7, 10, 17, 0.98));
+  border-right: 1px solid rgba(79, 227, 255, 0.14);
+  box-shadow: 6px 0 24px rgba(0, 0, 0, 0.5);
+}
+.air-panel::-webkit-scrollbar { width: 8px; }
+.air-panel::-webkit-scrollbar-thumb { background: #1e2735; border-radius: 4px; }
+
+.air-title {
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  color: #6fd8ff;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  text-shadow: 0 0 12px rgba(79, 227, 255, 0.3);
+}
+
+.air-res {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.air-cap {
+  background: rgba(79, 227, 255, 0.06);
+  border: 1px solid rgba(79, 227, 255, 0.22);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.air-cap-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+.air-cap-label { font-size: 10px; letter-spacing: 0.12em; color: #8fb4c8; text-transform: uppercase; }
+.air-cap-place { font-size: 11px; font-weight: 700; color: #7CFFB0; }
+.air-cap-place.behind { color: #ff9b9b; }
+.air-cap-val { font-size: 20px; font-weight: 700; color: #eafcff; text-shadow: 0 0 14px rgba(79, 227, 255, 0.4); }
+.air-cap-bar {
+  margin-top: 6px;
+  height: 8px;
+  border-radius: 4px;
+  background: #0c1420;
+  overflow: hidden;
+  position: relative;
+}
+.air-cap-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2b8fb8, #4fe3ff 70%, #bff6ff);
+  box-shadow: 0 0 12px rgba(79, 227, 255, 0.6);
+  transition: width 0.2s linear;
+}
+.air-cap-ticks { position: absolute; inset: 0; pointer-events: none; }
+
+.air-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 13px;
+  padding: 5px 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 6px;
+}
+.air-stat .k { color: #8b96a8; font-size: 11px; letter-spacing: 0.06em; }
+.air-stat .v { font-weight: 700; color: #eef4fb; }
+.air-stat .sub { color: #6fd8ff; font-size: 11px; margin-left: 6px; }
+
+.air-section-h {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #64788c;
+  margin: 14px 2px 6px;
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 4px;
+}
+
+.air-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 1px solid rgba(120, 160, 200, 0.18);
+  background: rgba(24, 32, 46, 0.7);
+  color: #dbe6f2;
+  border-radius: 7px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  font: 12px var(--mono);
+  transition: background 0.12s, border-color 0.12s, transform 0.06s;
+}
+.air-btn:hover:not(:disabled) { background: rgba(38, 52, 74, 0.9); border-color: rgba(79, 227, 255, 0.4); }
+.air-btn:active:not(:disabled) { transform: translateY(1px); }
+.air-btn:disabled { opacity: 0.42; cursor: default; }
+.air-btn .name { font-weight: 700; color: #eaf1f9; }
+.air-btn .cost { float: right; color: #ffd479; font-weight: 700; }
+.air-btn .cost.ok { color: #8fe6a0; }
+.air-btn .desc { display: block; color: #8ea0b4; font-size: 10.5px; margin-top: 3px; line-height: 1.35; }
+.air-btn .eff { color: #6fd8ff; }
+.air-btn.proj { border-color: rgba(180, 120, 255, 0.25); }
+.air-btn.proj:hover:not(:disabled) { border-color: rgba(200, 150, 255, 0.6); }
+
+.air-done {
+  font-size: 11px;
+  color: #5f7a67;
+  padding: 4px 10px;
+  border-left: 2px solid #2f6b45;
+  margin-bottom: 3px;
+}
+.air-done::before { content: '\2713 '; color: #57c785; }
+
+.air-flash { animation: air-flash 0.5s ease; }
+@keyframes air-flash {
+  from { background: rgba(79, 227, 255, 0.4); }
+}
+
+/* ---------- Datacenter card (floating over map) ---------- */
+
+.air-dc-card {
+  position: absolute;
+  width: 232px;
+  background: rgba(10, 15, 24, 0.97);
+  border: 1px solid rgba(79, 227, 255, 0.4);
+  border-radius: 9px;
+  padding: 10px 12px;
+  z-index: 6;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7), 0 0 24px rgba(79, 227, 255, 0.12);
+  font-size: 12px;
+  pointer-events: auto;
+}
+.air-dc-card .dc-name { font-weight: 700; font-size: 13px; color: #eaf3fb; margin-bottom: 2px; }
+.air-dc-card .dc-owner { font-size: 11px; margin-bottom: 8px; }
+.air-dc-card .dc-rows { display: grid; gap: 3px; margin-bottom: 9px; }
+.air-dc-card .dc-rows div { display: flex; justify-content: space-between; color: #a9b7c8; }
+.air-dc-card .dc-rows b { color: #eef4fb; }
+.air-dc-card .close { position: absolute; top: 6px; right: 9px; cursor: pointer; color: #6b7889; font-size: 14px; }
+.air-dc-card .close:hover { color: #fff; }
+
+.air-legend {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 5;
+  background: rgba(8, 12, 20, 0.8);
+  border: 1px solid rgba(120, 160, 200, 0.15);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 10.5px;
+  color: #9fb0c2;
+  display: grid;
+  gap: 4px;
+}
+.air-legend .row { display: flex; align-items: center; gap: 6px; }
+.air-legend .dot { width: 9px; height: 9px; border-radius: 50%; box-shadow: 0 0 8px currentColor; }
+
+/* ---------- Win / lose overlays ---------- */
+
+.air-modal-win .modal-title { color: #7CFFB0; }
+.air-finish {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 40%, rgba(20, 60, 50, 0.9), rgba(2, 6, 10, 0.97));
+  animation: fade-in 0.4s;
+  pointer-events: auto;
+}
+.air-finish h1 {
+  font-size: 64px;
+  margin: 0;
+  color: #7CFFB0;
+  text-shadow: 0 0 40px rgba(124, 255, 176, 0.6);
+  letter-spacing: 0.04em;
+}
+.air-finish p { color: #cfe9d8; font-size: 16px; max-width: 560px; text-align: center; line-height: 1.5; }
+.air-finish .sub { color: #8fb8a4; font-size: 13px; }
