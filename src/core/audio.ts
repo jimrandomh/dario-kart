@@ -14,7 +14,16 @@ export type SfxName =
   | 'fail'
   | 'click'
   | 'lap'
-  | 'thought';
+  | 'thought'
+  | 'shell'
+  | 'explode'
+  | 'zap'
+  | 'jump'
+  | 'trick'
+  | 'tier'
+  | 'warn'
+  | 'slingshot'
+  | 'hit';
 
 export class Sfx {
   ctx: AudioContext | null = null;
@@ -165,6 +174,39 @@ export class Sfx {
         break;
       case 'click':
         this.tone(1200, 0.03, 'square', 0.05);
+        break;
+      case 'shell':
+        this.noiseBurst(0.35, 0.18, 1200, 0, 300, 'bandpass');
+        this.tone(520, 0.25, 'triangle', 0.08, 0, 260);
+        break;
+      case 'explode':
+        this.noiseBurst(0.9, 0.4, 2500, 0, 80);
+        this.tone(90, 0.6, 'sine', 0.35, 0, 30);
+        break;
+      case 'zap':
+        for (let i = 0; i < 6; i++) this.tone(1800 - i * 220, 0.06, 'sawtooth', 0.07, i * 0.035);
+        this.noiseBurst(0.4, 0.2, 5000, 0.05, 800, 'highpass');
+        break;
+      case 'jump':
+        this.tone(300, 0.25, 'square', 0.07, 0, 700);
+        break;
+      case 'trick':
+        [880, 1175, 1568].forEach((f, i) => this.tone(f, 0.09, 'square', 0.07, i * 0.06));
+        break;
+      case 'tier':
+        this.tone(1320, 0.12, 'triangle', 0.08);
+        this.tone(1760, 0.14, 'triangle', 0.06, 0.05);
+        break;
+      case 'warn':
+        this.tone(1040, 0.08, 'square', 0.08);
+        this.tone(1040, 0.08, 'square', 0.08, 0.14);
+        break;
+      case 'slingshot':
+        this.noiseBurst(0.5, 0.22, 600, 0, 5000, 'bandpass');
+        break;
+      case 'hit':
+        this.tone(220, 0.1, 'square', 0.12, 0, 110);
+        this.noiseBurst(0.25, 0.25, 1500, 0, 200);
         break;
     }
   }

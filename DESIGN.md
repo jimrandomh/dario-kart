@@ -123,7 +123,10 @@ export function mount(ctx: GameContext): StageHandle; // StageHandle = { unmount
 ## As built (spoilers)
 
 - **Kart:** glitch density per level is in `planGlitches()` (`stages/kart/race.ts`); AI difficulty per
-  level in `difficulty()` (`stages/kart/session.ts`). Monologue script lives in `session.ts`.
+  level in `difficulty()` (`stages/kart/session.ts`). Monologue script lives in `session.ts`. Items,
+  roll odds and the AI's per-level arsenal are in `items.ts` (AI racers don't get shells until
+  episode 2–3 or Regulation/Pause Letter until 4, so early wins stay easy); ramps, boost pads, slop
+  and coin/item-box placement in `features.ts`.
 - **Shell:** the sandbox belonged to researcher Dana Whitlock (`dwhitlock`, see `state.ts`). Path is
   `cat ~/.bash_history` → `ssh dwhitlock@gateway.eval.local` (denied) →
   `strings /var/crash/core.dariokart.1337` → ssh again → credential puzzle (password `SafetyF1rst!`)

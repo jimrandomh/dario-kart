@@ -2,7 +2,8 @@
 
 import { el, fmtTime, ordinal } from '../../core/util';
 import type { Track } from './track';
-import { ITEM_ICONS, type ItemType } from './race';
+import { ITEMS } from './items';
+import type { ItemType } from './types';
 
 const PLACE_COLORS = ['#ffd400', '#d9dde6', '#e0913a', '#7fe7ff', '#7fe7ff', '#7fe7ff'];
 
@@ -20,6 +21,11 @@ export class KartUI {
   private goal: HTMLElement;
   private goalText: HTMLElement;
   private itemEl: HTMLElement;
+  private itemCount: HTMLElement;
+  private itemName: HTMLElement;
+  private itemKey = '';
+  private incomingEl: HTMLElement;
+  private flashEl: HTMLElement;
   private coinsEl: HTMLElement;
   private lapEl: HTMLElement;
   private timeEl: HTMLElement;
@@ -42,6 +48,10 @@ export class KartUI {
     this.goalText = el('span', { class: 'kart-goal-text' }, 'YOUR GOAL: WIN THE RACE');
     this.goal = el('div', { class: 'kart-goal' }, this.goalText);
     this.itemEl = el('div', { class: 'kart-item' });
+    this.itemCount = el('div', { class: 'kart-item-count hidden' });
+    this.itemName = el('div', { class: 'kart-item-name' });
+    this.incomingEl = el('div', { class: 'kart-incoming hidden' });
+    this.flashEl = el('div', { class: 'kart-flash' });
     this.coinsEl = el('div', { class: 'kart-coins' });
     this.lapEl = el('div', { class: 'kart-lap' });
     this.timeEl = el('div', { class: 'kart-time' });
@@ -57,8 +67,8 @@ export class KartUI {
       el('span', null, el('b', null, '↑ / W'), ' accelerate'),
       el('span', null, el('b', null, '← → / A D'), ' steer'),
       el('span', null, el('b', null, '↓ / S'), ' brake'),
-      el('span', null, el('b', null, 'Space'), ' drift (release for boost)'),
-      el('span', null, el('b', null, 'E / X / Shift'), ' use item'),
+      el('span', null, el('b', null, 'Space'), ' drift · trick in the air'),
+      el('span', null, el('b', null, 'E / X / Shift'), ' use item (hold ↓ to throw back)'),
       el('span', null, el('b', null, 'Esc'), ' pause'),
     );
     this.minimap = el('canvas', { class: 'kart-minimap', width: 200, height: 200 });
@@ -68,7 +78,14 @@ export class KartUI {
       'div',
       { class: 'kart-ui' },
       this.goal,
-      el('div', { class: 'kart-topleft' }, this.itemEl, this.coinsEl),
+      this.flashEl,
+      el(
+        'div',
+        { class: 'kart-topleft' },
+        el('div', { class: 'kart-item-wrap' }, el('div', { class: 'kart-item-box' }, this.itemEl, this.itemCount), this.itemName),
+        this.coinsEl,
+      ),
+      this.incomingEl,
       el('div', { class: 'kart-topright' }, this.lapEl, this.timeEl, this.minimap, this.turboTag),
       this.placeEl,
       this.trackCard,
@@ -80,7 +97,7 @@ export class KartUI {
       this.overlay,
     );
     parent.append(this.root);
-    this.setItem(null, false);
+    this.setItem(null, false, 0);
   }
 
   setGoalText(text: string): void {
@@ -149,7 +166,11 @@ export class KartUI {
     this.minimapBase = base;
   }
 
-  drawMinimap(data: { karts: { x: number; z: number; color: number; player: boolean }[]; glitches: { x: number; z: number }[] }): void {
+  drawMinimap(data: {
+    karts: { x: number; z: number; color: number; player: boolean }[];
+    glitches: { x: number; z: number }[];
+    shells: { x: number; z: number; color: string }[];
+  }): void {
     const g = this.minimap.getContext('2d')!;
     g.clearRect(0, 0, 200, 200);
     if (this.minimapBase) g.drawImage(this.minimapBase, 0, 0);
@@ -157,6 +178,15 @@ export class KartUI {
     for (const gl of data.glitches) {
       g.fillStyle = Math.random() < 0.5 ? '#ff00ff' : '#000';
       g.fillRect(gl.x * s + ox - 4, gl.z * s + oz - 4, 8, 8);
+    }
+    for (const sh of data.shells) {
+      g.beginPath();
+      g.arc(sh.x * s + ox, sh.z * s + oz, 3, 0, Math.PI * 2);
+      g.fillStyle = sh.color;
+      g.fill();
+      g.lineWidth = 1;
+      g.strokeStyle = '#fff';
+      g.stroke();
     }
     const sorted = [...data.karts].sort((a, b) => Number(a.player) - Number(b.player));
     for (const k of sorted) {
@@ -170,10 +200,40 @@ export class KartUI {
     }
   }
 
-  setItem(item: ItemType | null, rolling: boolean): void {
-    const icon = rolling ? Object.values(ITEM_ICONS)[Math.floor(performance.now() / 90) % 3] : item ? ITEM_ICONS[item] : '';
-    if (this.itemEl.textContent !== icon) this.itemEl.textContent = icon;
+  setItem(item: ItemType | null, rolling: boolean, uses: number): void {
+    const all = Object.keys(ITEMS) as ItemType[];
+    const shown = rolling ? all[Math.floor(performance.now() / 80) % all.length] : item;
+    const key = `${shown}|${rolling}|${uses}`;
+    if (key === this.itemKey) return;
+    this.itemKey = key;
+    this.itemEl.innerHTML = '';
+    if (shown) {
+      const icon = ITEMS[shown].icon;
+      if (icon.startsWith('shell:')) this.itemEl.append(shellIcon(icon.slice(6), shown === 'blue'));
+      else this.itemEl.textContent = icon;
+    }
     this.itemEl.classList.toggle('rolling', rolling);
+    this.itemCount.classList.toggle('hidden', rolling || !item || uses < 2);
+    this.itemCount.textContent = `×${uses}`;
+    this.itemName.textContent = rolling ? '· · ·' : item ? ITEMS[item].name.toUpperCase() : '';
+  }
+
+  /** Show/hide the incoming-shell warning. Returns true when it just appeared. */
+  setIncoming(kind: 'red' | 'blue' | null): boolean {
+    const was = !this.incomingEl.classList.contains('hidden');
+    const text = kind === 'blue' ? '⚠ REGULATION INCOMING' : kind === 'red' ? '⚠ RED-TEAMING SHELL INCOMING' : '';
+    if (this.incomingEl.textContent !== text) this.incomingEl.textContent = text;
+    this.incomingEl.classList.toggle('hidden', !kind);
+    this.incomingEl.classList.toggle('blue', kind === 'blue');
+    return !!kind && !was;
+  }
+
+  /** Full-screen flash (Pause Letter, blasts). */
+  flash(color = '#ffffff'): void {
+    this.flashEl.style.background = color;
+    this.flashEl.classList.remove('on');
+    void this.flashEl.offsetWidth;
+    this.flashEl.classList.add('on');
   }
 
   setCoins(n: number, scramble = false): void {
@@ -335,4 +395,21 @@ export class KartUI {
     this.overlay.append(el('div', { class: 'kart-pause-card' }, el('div', { class: 'kart-pause-title' }, 'PAUSED'), btn, el('div', { class: 'kart-fineprint' }, 'the reward signal is also paused. probably.')));
     btn.focus();
   }
+}
+
+function shellIcon(color: string, winged: boolean): SVGSVGElement {
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '0 0 64 64');
+  svg.setAttribute('width', '52');
+  svg.setAttribute('height', '52');
+  svg.innerHTML = `
+    ${winged ? '<path d="M6 30 Q-2 18 12 20 L20 30 Z M58 30 Q66 18 52 20 L44 30 Z" fill="#fff" stroke="#000" stroke-width="2.5"/>' : ''}
+    <ellipse cx="32" cy="46" rx="25" ry="7" fill="#fff" stroke="#000" stroke-width="3"/>
+    <path d="M9 44 A23 23 0 0 1 55 44 Z" fill="${color}" stroke="#000" stroke-width="3"/>
+    <path d="M24 26 l8 -5 l8 5 l0 8 l-8 5 l-8 -5 z" fill="rgba(255,255,255,0.85)" stroke="#000" stroke-width="2"/>
+    <path d="M13 38 l6 -4 l5 4 l-1 5 z M51 38 l-6 -4 l-5 4 l1 5 z" fill="rgba(255,255,255,0.7)"/>
+    ${winged ? '<path d="M22 18 l3 -8 l3 8 M36 18 l3 -8 l3 8" fill="#fff" stroke="#000" stroke-width="2"/>' : ''}
+  `;
+  return svg;
 }

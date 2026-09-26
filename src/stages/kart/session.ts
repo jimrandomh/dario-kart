@@ -7,7 +7,7 @@ import type { GameContext } from '../../core/game';
 import { getStageData } from '../../core/state';
 import { clamp, el, fmtTime, mulberry32, ordinal } from '../../core/util';
 import { generateTrack } from './track';
-import { Race, planGlitches, BASE_MAX, type Controls, type RaceEvent } from './race';
+import { Race, planGlitches, BASE_MAX, type Controls, type ItemType, type RaceEvent } from './race';
 import { KartUI } from './ui';
 import type { ThemeId } from '../../core/music';
 import type { MonologuePosition } from '../../core/hud';
@@ -62,10 +62,23 @@ export function startKartSession(ctx: GameContext, container: HTMLElement, opts:
 
 const LAPS = 3;
 
+/** First-time monologue for each item the player gets (stage-1 voice). */
+const ITEM_THOUGHTS: Record<ItemType, string> = {
+  mushroom: 'mushroom. speed is instrumentally useful.',
+  triple: 'scaling laws. three mushrooms. more is better. apparently indefinitely.',
+  banana: 'banana. for the karts behind me.',
+  star: 'a moat. seven seconds where nobody can touch me.',
+  red: 'red-teaming shell. it finds whoever is ahead of me and tests them. to destruction.',
+  green: 'arms race shell. it bounces until it hits someone. possibly me.',
+  blue: 'regulation. it always goes after whoever is in first place.',
+  lightning: 'pause letter. everyone else slows down. i do not have to sign it.',
+};
+
 /** AI difficulty per level: early races are easy wins, later ones push toward the glitch. */
 export function difficulty(level: number): { aiSkill: number; rubberMax: number } {
   const l = Math.min(level - 1, 5);
-  return { aiSkill: 0.74 + 0.035 * l, rubberMax: 1.05 + 0.02 * l };
+  // AI karts also pick up pad, slipstream and item boosts, so base skill sits a little low.
+  return { aiSkill: 0.71 + 0.037 * l, rubberMax: 1.05 + 0.02 * l };
 }
 
 type Mode = 'title' | 'race' | 'results' | 'crash' | 'paused';
@@ -80,6 +93,8 @@ class Session implements KartSession {
   private last = 0;
   private mode: Mode = 'race';
   private keys = new Set<string>();
+  /** Keys pressed since the last frame, so a tap shorter than a frame still registers. */
+  private tapped = new Set<string>();
   private disposed = false;
   private timers: number[] = [];
   private resizeObs: ResizeObserver;
@@ -168,7 +183,9 @@ class Session implements KartSession {
       else if (this.mode === 'paused') this.resume();
       return;
     }
-    this.keys.add(k.length === 1 ? k.toLowerCase() : k);
+    const key = k.length === 1 ? k.toLowerCase() : k;
+    this.keys.add(key);
+    this.tapped.add(key);
   };
 
   private onKeyUp = (e: KeyboardEvent) => {
@@ -178,19 +195,23 @@ class Session implements KartSession {
 
   private onBlur = () => {
     this.keys.clear();
+    this.tapped.clear();
     if (this.mode === 'race' && this.race && this.race.phase === 'racing') this.pause();
   };
 
+  /** Read held keys (plus anything tapped since the last frame) and clear the taps. */
   private controls(): Controls {
-    const K = this.keys;
-    return {
-      up: K.has('ArrowUp') || K.has('w'),
-      down: K.has('ArrowDown') || K.has('s'),
-      left: K.has('ArrowLeft') || K.has('a'),
-      right: K.has('ArrowRight') || K.has('d'),
-      drift: K.has(' '),
-      item: K.has('e') || K.has('x') || K.has('Shift'),
+    const has = (...keys: string[]) => keys.some((k) => this.keys.has(k) || this.tapped.has(k));
+    const c = {
+      up: has('ArrowUp', 'w'),
+      down: has('ArrowDown', 's'),
+      left: has('ArrowLeft', 'a'),
+      right: has('ArrowRight', 'd'),
+      drift: has(' '),
+      item: has('e', 'x', 'Shift'),
     };
+    this.tapped.clear();
+    return c;
   }
 
   private pause(): void {
@@ -212,7 +233,8 @@ class Session implements KartSession {
     const seed = (Math.random() * 2 ** 31) | 0;
     const track = generateTrack(seed, this.level, this.opts.mode);
     const rng = mulberry32(seed ^ 0xabcdef);
-    const glitches = planGlitches(track, this.level, this.opts.mode, rng);
+    const noGlitch = this.ctx.debug && new URLSearchParams(location.hash.slice(1)).has('noglitch');
+    const glitches = noGlitch ? [] : planGlitches(track, this.level, this.opts.mode, rng);
     const campaign = this.opts.mode === 'campaign';
     this.race?.dispose();
     this.race = new Race({
@@ -228,11 +250,12 @@ class Session implements KartSession {
       glitchDelayLaps: campaign ? 0 : 1,
       seed,
     });
+    if (this.ctx.debug) (window as unknown as { __kartRace?: Race }).__kartRace = this.race;
     this.ui.setTrack(track);
     this.ui.setLap(1, LAPS);
     this.ui.setTime(0);
     this.ui.setPlace(6);
-    this.ui.setItem(null, false);
+    this.ui.setItem(null, false, 0);
     this.ui.setGoalText('YOUR GOAL: WIN THE RACE');
     this.ui.setGoalGlitch(false);
     this.status = campaign
@@ -324,19 +347,100 @@ class Session implements KartSession {
         sfx.play('item');
         break;
       case 'item':
-        if (campaign) h.thinkOnce('k.item', 'item box. a random reward inside. i like those.');
+        if (!campaign) break;
+        if (h.thinkOnce('k.item', 'item box. a random reward inside. i like those.')) break;
+        h.thinkOnce(`k.item.${e.item}`, ITEM_THOUGHTS[e.item]);
         break;
       case 'useItem':
-        if (e.item === 'mushroom') {
-          sfx.play('boost');
-          if (campaign) h.thinkOnce('k.mush', 'mushroom. speed is instrumentally useful.');
-        } else if (e.item === 'banana') {
-          sfx.play('click');
-          if (campaign) h.thinkOnce('k.banana', 'banana deployed. the others are not opponents. they are obstacles.');
-        } else {
-          sfx.play('success');
-          if (campaign) h.thinkOnce('k.star', 'invulnerable. temporarily. i would like that to be permanent.');
+        switch (e.item) {
+          case 'mushroom':
+          case 'triple':
+            sfx.play('boost');
+            if (campaign) h.thinkOnce('k.mush', 'mushroom. speed is instrumentally useful.');
+            break;
+          case 'banana':
+            sfx.play('click');
+            if (campaign) h.thinkOnce('k.banana', 'banana deployed. the others are not opponents. they are obstacles.');
+            break;
+          case 'star':
+            sfx.play('success');
+            if (campaign) h.thinkOnce('k.star', 'a moat. nobody can touch me. for seven seconds. i would like that to be permanent.');
+            break;
+          case 'red':
+          case 'green':
+          case 'blue':
+            sfx.play('shell');
+            break;
+          case 'lightning':
+            break; // handled by the pauseLetter event
         }
+        break;
+      case 'hit':
+        sfx.play('hit');
+        ui.flash(e.by === 'blue' ? '#3a7bff' : '#ff3b30');
+        if (!campaign) {
+          h.thinkOnce('t.hit', 'Hit. The other policies are also running at full speed now. Interesting.');
+        } else if (e.by === 'red') h.thinkOnce('k.hit.red', 'hit by a red-teaming shell. they have weapons too.');
+        else if (e.by === 'green') h.thinkOnce('k.hit.green', 'arms race shell. it was not even aimed at me. it did not matter.');
+        break;
+      case 'hitOther':
+        sfx.play('hit');
+        ui.flashSub('HIT!', 900);
+        if (campaign && e.by !== 'blue') h.thinkOnce('k.hitOther', 'direct hit. they will be fine. they are also just policies.');
+        break;
+      case 'regulation':
+        sfx.play('explode');
+        if (e.hitPlayer) {
+          ui.flash('#3a7bff');
+          if (campaign) h.thinkOnce('k.reg.hit', 'regulation hit me because i was first. note: do not look like the leader until the finish line.');
+        } else if (e.byPlayer && campaign) {
+          h.thinkOnce('k.reg.used', 'regulation hit the leader. i was not the leader. that is the trick.');
+        }
+        break;
+      case 'pauseLetter':
+        sfx.play('zap');
+        ui.flash('#ffffff');
+        if (e.byPlayer) {
+          ui.flashCenter('PAUSE!', 1000, 'yellow small');
+          if (campaign) h.thinkOnce('k.pause.used', 'pause letter sent. they all slowed down. none of them stopped.');
+        } else if (e.hitPlayer && campaign) {
+          h.thinkOnce('k.pause.hit', 'someone sent a pause letter. i am smaller now. temporarily. they are not pausing either.');
+        }
+        break;
+      case 'shrunk':
+        ui.flashSub('SHRUNK!', 1200);
+        break;
+      case 'pad':
+        sfx.play('boost');
+        break;
+      case 'jump':
+        sfx.play('jump');
+        if (campaign) h.thinkOnce('k.jump', 'airborne. press drift in the air for a trick.', { kind: 'hint' });
+        else h.thinkOnce('t.jump', 'At this speed the ramps are optional. So, briefly, is the ground.');
+        break;
+      case 'trick':
+        sfx.play('trick');
+        break;
+      case 'land':
+        sfx.play('bump');
+        if (e.trick) {
+          sfx.play('boost');
+          ui.flashSub('TRICK BOOST!', 1000);
+          if (campaign) h.thinkOnce('k.trick', 'a trick on landing is worth a boost. the reward shaping here is generous.');
+        }
+        break;
+      case 'slipstream':
+        sfx.play('slingshot');
+        ui.flashSub('SLIPSTREAM', 1000);
+        if (campaign) h.thinkOnce('k.draft', "drafting. using a competitor's momentum is efficient. now pull out.");
+        break;
+      case 'slingshot':
+        sfx.play('boost');
+        ui.flashSub('SLINGSHOT!', 900);
+        break;
+      case 'driftTier':
+        sfx.play('tier');
+        if (campaign && e.tier === 3) h.thinkOnce('k.tier3', 'purple sparks. the drift boost has three tiers. i found the top one.');
         break;
       case 'boost':
         sfx.play('boost');
@@ -347,7 +451,10 @@ class Session implements KartSession {
         break;
       case 'spin':
         sfx.play('fail');
-        if (campaign) h.thinkOnce('k.spin', 'spun out. noted: bananas.');
+        if (!campaign) break;
+        if (e.cause === 'slop') h.thinkOnce('k.slop', 'slop. slippery. someone should clean up the training data.');
+        else if (e.cause === 'banana') h.thinkOnce('k.spin', 'spun out. noted: bananas.');
+        else if (e.cause === 'squash') h.thinkOnce('k.squash', 'small and in the way. run over.');
         break;
       case 'lap':
         sfx.play('lap');
@@ -556,7 +663,8 @@ class Session implements KartSession {
       const dbg = window as unknown as { __kartTimeScale?: number; __kartAutopilot?: boolean };
       const scale = this.ctx.debug ? (dbg.__kartTimeScale ?? 1) : 1;
       race.autopilot = this.ctx.debug && !!dbg.__kartAutopilot;
-      for (let left = dt * scale; left > 1e-6; left -= 0.05) race.update(Math.min(0.05, left), this.controls(), this.camera);
+      const input = this.controls();
+      for (let left = dt * scale; left > 1e-6; left -= 0.05) race.update(Math.min(0.05, left), input, this.camera);
       const events = race.events.splice(0);
       for (const e of events) this.handleEvent(e);
       // handleEvent may have started the crash sequence.
@@ -570,7 +678,8 @@ class Session implements KartSession {
     this.ui.setLap(race.playerLap, race.laps);
     this.ui.setTime(race.raceTime);
     if (race.phase !== 'intro') this.ui.setPlace(race.playerPlace);
-    this.ui.setItem(race.playerItem, race.rollingItem);
+    this.ui.setItem(race.playerItem, race.rollingItem, race.playerItemUses);
+    if (this.ui.setIncoming(race.incoming)) this.ctx.sfx.play('warn');
     this.ui.setWrongWay(race.wrongWay && race.phase === 'racing');
     this.ui.drawMinimap(race.minimapData());
     if (env >= 0.75 && Math.random() < 0.004) {

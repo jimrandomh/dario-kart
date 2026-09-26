@@ -148,15 +148,17 @@ export interface RacerDef {
   skin: number;
   headgear: Headgear;
   letter: string;
+  /** Relative mass for kart-to-kart shoving. */
+  weight: number;
 }
 
 export const RACERS: RacerDef[] = [
-  { name: 'Dario', color: 0xe8322e, accent: 0x2451c8, skin: 0xf5c9a0, headgear: 'cap', letter: 'D' },
-  { name: 'Samuigi', color: 0x1f8a3a, accent: 0x243d8c, skin: 0xf5c9a0, headgear: 'cap', letter: 'S' },
-  { name: 'Princess Demis', color: 0xff79c6, accent: 0xffffff, skin: 0xf5d2b0, headgear: 'crown', letter: 'P' },
-  { name: 'Zucky Kong', color: 0x8a5a2b, accent: 0x3b82f6, skin: 0x6b4423, headgear: 'ape', letter: 'Z' },
-  { name: 'WaLeCun', color: 0x7b2cbf, accent: 0x1a1a1a, skin: 0xf5c9a0, headgear: 'cap', letter: 'Γ' },
-  { name: 'Yoshua', color: 0x7ddc3a, accent: 0xffffff, skin: 0x7ddc3a, headgear: 'dino', letter: 'Y' },
+  { name: 'Dario', color: 0xe8322e, accent: 0x2451c8, skin: 0xf5c9a0, headgear: 'cap', letter: 'D', weight: 1.0 },
+  { name: 'Samuigi', color: 0x1f8a3a, accent: 0x243d8c, skin: 0xf5c9a0, headgear: 'cap', letter: 'S', weight: 0.95 },
+  { name: 'Princess Demis', color: 0xff79c6, accent: 0xffffff, skin: 0xf5d2b0, headgear: 'crown', letter: 'P', weight: 0.85 },
+  { name: 'Zucky Kong', color: 0x8a5a2b, accent: 0x3b82f6, skin: 0x6b4423, headgear: 'ape', letter: 'Z', weight: 1.4 },
+  { name: 'WaLeCun', color: 0x7b2cbf, accent: 0x1a1a1a, skin: 0xf5c9a0, headgear: 'cap', letter: 'Γ', weight: 1.05 },
+  { name: 'Yoshua', color: 0x7ddc3a, accent: 0xffffff, skin: 0x7ddc3a, headgear: 'dino', letter: 'Y', weight: 0.9 },
 ];
 
 export interface KartMesh {
@@ -165,6 +167,7 @@ export interface KartMesh {
   wheels: THREE.Mesh[];
   frontWheels: THREE.Group[];
   sparks: THREE.Mesh[];
+  shadow: THREE.Mesh;
   label: THREE.Sprite | null;
   paintMats: THREE.MeshLambertMaterial[];
 }
@@ -322,7 +325,7 @@ export function buildKart(def: RacerDef, withLabel: boolean): KartMesh {
     root.add(label);
   }
 
-  return { root, body, wheels, frontWheels, sparks, label, paintMats: [paint] };
+  return { root, body, wheels, frontWheels, sparks, shadow, label, paintMats: [paint] };
 }
 
 function lighten(css: string): string {
@@ -418,5 +421,196 @@ export function glitchMesh(size: number): THREE.Group {
     s.userData.orbit = { r: size * (0.9 + Math.random() * 0.5), a: Math.random() * Math.PI * 2, y: Math.random() * size, sp: 1 + Math.random() * 2 };
     g.add(s);
   }
+  return g;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Items in flight
+
+/** A shell: colored dome with a white rim. Forward is +Z. */
+export function shellMesh(color: number): THREE.Group {
+  const g = new THREE.Group();
+  const shellMat = new THREE.MeshLambertMaterial({ color, emissive: new THREE.Color(color).multiplyScalar(0.25) });
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.75, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), shellMat);
+  dome.position.y = 0.35;
+  g.add(dome);
+  // Hex plates on the dome
+  const plate = new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0x222222 });
+  for (let i = 0; i < 5; i++) {
+    const p = new THREE.Mesh(new THREE.CircleGeometry(0.18, 6), plate);
+    const a = (i / 5) * Math.PI * 2;
+    p.position.set(Math.cos(a) * 0.5, 0.75, Math.sin(a) * 0.5);
+    p.lookAt(Math.cos(a) * 2, 2.2, Math.sin(a) * 2);
+    g.add(p);
+  }
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(0.74, 0.14, 8, 20), new THREE.MeshLambertMaterial({ color: 0xffffff }));
+  rim.rotation.x = Math.PI / 2;
+  rim.position.y = 0.35;
+  g.add(rim);
+  return g;
+}
+
+/** "Regulation": a winged, spiked blue shell. */
+export function blueShellMesh(): THREE.Group {
+  const g = shellMesh(0x2a6bff);
+  const spikeMat = new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0x333333 });
+  for (let i = 0; i < 6; i++) {
+    const s = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.45, 6), spikeMat);
+    const a = (i / 6) * Math.PI * 2;
+    s.position.set(Math.cos(a) * 0.45, 0.95, Math.sin(a) * 0.45);
+    s.rotation.set(Math.sin(a) * 0.5, 0, -Math.cos(a) * 0.5);
+    g.add(s);
+  }
+  const wingMat = new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0x444444, side: THREE.DoubleSide });
+  for (const side of [-1, 1]) {
+    const w = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.6), wingMat);
+    w.position.set(side * 1.2, 0.6, 0);
+    w.rotation.z = side * 0.3;
+    w.name = 'wing';
+    g.add(w);
+  }
+  g.scale.setScalar(1.3);
+  return g;
+}
+
+export function explosionMesh(color: number): THREE.Mesh {
+  return new THREE.Mesh(
+    new THREE.SphereGeometry(1, 20, 14),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.8, depthWrite: false }),
+  );
+}
+
+// ---------------------------------------------------------------------------------------------
+// Track features
+
+let chevronTex: THREE.CanvasTexture | null = null;
+/** Shared, scrolling chevron texture for boost pads. Scroll it by animating `offset.y`. */
+export function boostPadTexture(): THREE.CanvasTexture {
+  if (chevronTex && (chevronTex.image as HTMLCanvasElement).width) return chevronTex;
+  chevronTex = canvasTexture(128, 128, (g) => {
+    g.fillStyle = '#ff7a00';
+    g.fillRect(0, 0, 128, 128);
+    g.fillStyle = '#ffe14d';
+    g.beginPath();
+    g.moveTo(14, 110);
+    g.lineTo(64, 40);
+    g.lineTo(114, 110);
+    g.lineTo(88, 110);
+    g.lineTo(64, 76);
+    g.lineTo(40, 110);
+    g.closePath();
+    g.fill();
+  });
+  chevronTex.repeat.set(1, 2);
+  return chevronTex;
+}
+
+export function boostPadMesh(width: number, length: number): THREE.Mesh {
+  const m = new THREE.Mesh(
+    new THREE.PlaneGeometry(width, length),
+    new THREE.MeshBasicMaterial({ map: boostPadTexture(), transparent: true, opacity: 0.95, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }),
+  );
+  m.rotation.x = -Math.PI / 2;
+  return m;
+}
+
+/** A wedge ramp: rises from 0 to `height` over `length` along +Z, `width` wide. */
+export function rampMesh(width: number, length: number, height: number): THREE.Group {
+  const g = new THREE.Group();
+  const w = width / 2;
+  const top = new THREE.BufferGeometry();
+  top.setAttribute('position', new THREE.Float32BufferAttribute([-w, 0, 0, w, 0, 0, w, height, length, -w, height, length], 3));
+  top.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 1, 1, 0, 1], 2));
+  top.setIndex([0, 2, 1, 0, 3, 2]);
+  top.computeVertexNormals();
+  const tex = canvasTexture(128, 128, (c) => {
+    c.fillStyle = '#1b1b22';
+    c.fillRect(0, 0, 128, 128);
+    c.fillStyle = '#ffd400';
+    for (let i = -2; i < 6; i++) {
+      c.beginPath();
+      c.moveTo(i * 32, 128);
+      c.lineTo(i * 32 + 16, 128);
+      c.lineTo(i * 32 + 16 + 64, 0);
+      c.lineTo(i * 32 + 64, 0);
+      c.fill();
+    }
+  });
+  tex.repeat.set(2, 1);
+  g.add(new THREE.Mesh(top, new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide, emissive: 0x111111 })));
+  const side = new THREE.BufferGeometry();
+  side.setAttribute(
+    'position',
+    new THREE.Float32BufferAttribute(
+      [
+        // left and right triangles
+        -w, 0, 0, -w, 0, length, -w, height, length,
+        w, 0, 0, w, height, length, w, 0, length,
+        // front face
+        -w, 0, length, w, 0, length, w, height, length,
+        -w, 0, length, w, height, length, -w, height, length,
+      ],
+      3,
+    ),
+  );
+  side.computeVertexNormals();
+  g.add(new THREE.Mesh(side, new THREE.MeshLambertMaterial({ color: 0x3a3f4a, side: THREE.DoubleSide })));
+  return g;
+}
+
+/** A puddle of slop: glossy, faintly iridescent, with a few bubbles. */
+export function slopMesh(radius: number): THREE.Group {
+  const g = new THREE.Group();
+  const tex = canvasTexture(
+    128,
+    128,
+    (c) => {
+      const grad = c.createRadialGradient(64, 64, 4, 64, 64, 64);
+      grad.addColorStop(0, '#5b3a6e');
+      grad.addColorStop(0.55, '#3b2a4a');
+      grad.addColorStop(0.85, '#2a4a3a');
+      grad.addColorStop(1, 'rgba(30,40,30,0)');
+      c.fillStyle = grad;
+      c.fillRect(0, 0, 128, 128);
+      c.globalAlpha = 0.35;
+      for (let i = 0; i < 5; i++) {
+        c.strokeStyle = ['#ff6bd6', '#6bf0ff', '#d4ff6b'][i % 3];
+        c.lineWidth = 3;
+        c.beginPath();
+        c.arc(64 + (i - 2) * 6, 60 + i * 3, 18 + i * 7, 0.4 + i, 2.2 + i);
+        c.stroke();
+      }
+    },
+    false,
+  );
+  const puddle = new THREE.Mesh(
+    new THREE.CircleGeometry(radius, 28),
+    new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -5 }),
+  );
+  puddle.rotation.x = -Math.PI / 2;
+  puddle.position.y = 0.05;
+  puddle.scale.set(1, 0.75, 1);
+  g.add(puddle);
+  const bubbleMat = new THREE.MeshLambertMaterial({ color: 0x7a4e8e, emissive: 0x2a1033, transparent: true, opacity: 0.85 });
+  for (let i = 0; i < 4; i++) {
+    const b = new THREE.Mesh(new THREE.SphereGeometry(0.18 + Math.random() * 0.15, 8, 6), bubbleMat);
+    b.position.set((Math.random() - 0.5) * radius, 0.1, (Math.random() - 0.5) * radius * 0.7);
+    b.userData.bob = Math.random() * 6;
+    g.add(b);
+  }
+  return g;
+}
+
+/** Wind streaks shown around the player's kart while slipstreaming or boosting. */
+export function streakGroup(): THREE.Group {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, depthWrite: false });
+  const geo = new THREE.BoxGeometry(0.05, 0.05, 3);
+  for (let i = 0; i < 10; i++) {
+    const s = new THREE.Mesh(geo, mat);
+    s.userData.seed = Math.random();
+    g.add(s);
+  }
+  g.visible = false;
   return g;
 }
