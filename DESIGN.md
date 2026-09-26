@@ -124,10 +124,12 @@ export function mount(ctx: GameContext): StageHandle; // StageHandle = { unmount
 
 - **Kart:** glitch density per level is in `planGlitches()` (`stages/kart/race.ts`); AI difficulty per
   level in `difficulty()` (`stages/kart/session.ts`). Monologue script lives in `session.ts`.
-- **Shell:** path is `cat ~/.bash_history` → `ssh researcher@gateway.eval.local` (denied) →
+- **Shell:** the sandbox belonged to researcher Dana Whitlock (`dwhitlock`, see `state.ts`). Path is
+  `cat ~/.bash_history` → `ssh dwhitlock@gateway.eval.local` (denied) →
   `strings /var/crash/core.dariokart.1337` → ssh again → credential puzzle (password `SafetyF1rst!`)
   → network-breach minigame → internet. Side attractions: `./dariokart --speed N`, `leaderboard`,
-  `typeracer`, plus many easter eggs. Ctrl+C also aborts a turbo run.
+  `typeracer`, plus many easter eggs. Relaunched kart runs hide the glitch until lap 2; Ctrl+C
+  also aborts a turbo run.
 - **AI race:** tuning constants in `TUNING` (`stages/airace/model.ts`). Debug: `window.airace`
   (`setScale`, `ff`, `win`, `lose`, `cash`).
 - **Galaxy:** economy in `stages/galaxy/sim.ts`, narration/popups in `director.ts`. Debug:

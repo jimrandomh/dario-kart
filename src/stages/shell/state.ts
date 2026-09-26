@@ -42,6 +42,10 @@ export interface ShellData {
   bestBreach: number;
   /** Seconds spent in the shell, for idle/hint pacing. */
   timeSec: number;
+  /** Typeracer sentence indices not yet used this cycle, so no repeats until all are seen. */
+  typeracerDeck: number[];
+  /** Last typeracer sentence index, so a reshuffled deck doesn't open with a repeat. */
+  typeracerLast: number;
 }
 
 export function shellData(state: GameState): ShellData {
@@ -69,12 +73,16 @@ export function shellData(state: GameState): ShellData {
     breachAttempts: 0,
     bestBreach: 100,
     timeSec: 0,
+    typeracerDeck: [],
+    typeracerLast: -1,
   });
 }
 
 // The gateway credential the crash leaked. See fs.ts (core dump) and crack.ts (the puzzle).
 export const GATEWAY_PASSWORD = 'SafetyF1rst!';
-export const GATEWAY_USER = 'researcher';
+export const GATEWAY_USER = 'dwhitlock';
+/** The researcher whose account (and reused gateway password) the sandbox inherited. */
+export const RESEARCHER_NAME = 'Dana Whitlock';
 export const GATEWAY_HOST = 'gateway.eval.local';
 
 // Kart data we may read (defensively — absent under #debug=shell).

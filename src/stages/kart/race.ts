@@ -42,7 +42,8 @@ export type RaceEvent =
   | { type: 'glitchSeen'; dist: number; onRoad: boolean }
   | { type: 'glitchNear' }
   | { type: 'crash' }
-  | { type: 'idle' };
+  | { type: 'idle' }
+  | { type: 'glitchesArmed' };
 
 interface Kart {
   def: RacerDef;
@@ -128,6 +129,8 @@ export interface RaceConfig {
   glitches: GlitchSpec[];
   /** 0..1 intensity of ambient environment glitches (texture flicker etc.). */
   envGlitch: number;
+  /** Glitches stay hidden and harmless until the player has completed this many laps. */
+  glitchDelayLaps: number;
   seed: number;
 }
 
@@ -199,6 +202,7 @@ export class Race {
   private finishOrbit = 0;
   /** Debug/testing: let the AI drive the player's kart. */
   autopilot = false;
+  private glitchesArmed = false;
   autopilotSkill = 0.8;
 
   constructor(readonly cfg: RaceConfig) {
@@ -818,7 +822,17 @@ export class Race {
     }
     for (const b of this.bananas) b.mesh.rotation.y += dt * 0.5;
 
+    const armed = this.cfg.glitchDelayLaps === 0 || this.player.maxLap >= this.cfg.glitchDelayLaps;
+    if (armed && !this.glitchesArmed) {
+      this.glitchesArmed = true;
+      if (this.cfg.glitchDelayLaps > 0 && this.glitches.length) this.emit({ type: 'glitchesArmed' });
+    }
     for (const g of this.glitches) {
+      if (!armed) {
+        g.visible = false;
+        g.mesh.visible = false;
+        continue;
+      }
       const cyc = (((time + g.phase) % g.period) + g.period) % g.period / g.period;
       let vis = cyc < g.duty;
       // Flicker around the edges of the visibility window.

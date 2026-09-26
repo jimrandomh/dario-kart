@@ -14,7 +14,7 @@ import {
   type DirNode,
   type FsCtx,
 } from './fs';
-import { kartData, type ShellData } from './state';
+import { kartData, GATEWAY_USER, type ShellData } from './state';
 import type { GameContext } from '../../core/game';
 
 export interface Line {
@@ -282,6 +282,10 @@ function lsCmd(env: ShellEnv, args: string[]): Line[] {
   const { node } = resolve(env, path);
   if (!node) return [L(`ls: cannot access '${path}': No such file or directory`, 'err')];
   if (node.type === 'file') return [L(path)];
+  if (node.locked) {
+    env.react('locked_home');
+    return [L(`ls: cannot open directory '${path}': Permission denied`, 'err')];
+  }
   const names = listDir(node, all);
   if (all) names.unshift('.', '..');
   const c = fsctx(env);
@@ -291,19 +295,19 @@ function lsCmd(env: ShellEnv, args: string[]): Line[] {
   const out: Line[] = [L('total ' + Math.max(4, names.length * 4))];
   for (const n of names) {
     if (n === '.' || n === '..') {
-      out.push(L(`drwxr-xr-x  2 agent agent     4096 Sep 25 18:00 ${n}`));
+      out.push(L(`drwxr-xr-x  2 ${'agent'.padEnd(9)} ${'agent'.padEnd(9)}      4096 Sep 25 18:00 ${n}`));
       continue;
     }
     const child = node.children[n];
     if (!child) continue;
     const isDir = child.type === 'dir';
     const isExec = child.type === 'file' && child.exec;
-    const perm = isDir ? 'drwxr-xr-x' : isExec ? '-rwxr-xr-x' : '-rw-r--r--';
+    const perm = isDir ? (child.locked ? 'drwx------' : 'drwxr-xr-x') : isExec ? '-rwxr-xr-x' : '-rw-r--r--';
     const owner = (child.type === 'file' || child.type === 'dir' ? child.owner : null) ?? 'agent';
     const size = child.type === 'file' ? contentSize(child, c) : 4096;
     const mt = child.type === 'file' ? child.mtime : child.mtime;
     out.push(
-      L(`${perm}  1 ${owner.padEnd(5)} ${owner.padEnd(5)} ${String(size).padStart(9)} ${mt ?? 'Sep 25 18:00'} ${decorate(node, n)}`),
+      L(`${perm}  1 ${owner.padEnd(9)} ${owner.padEnd(9)} ${String(size).padStart(9)} ${mt ?? 'Sep 25 18:00'} ${decorate(node, n)}`),
     );
   }
   return out;
@@ -322,6 +326,10 @@ function cdCmd(env: ShellEnv, args: string[]): Line[] {
   const { path, node } = resolve(env, target);
   if (!node) return [L(`cd: ${target}: No such file or directory`, 'err')];
   if (node.type !== 'dir') return [L(`cd: ${target}: Not a directory`, 'err')];
+  if (node.locked) {
+    env.react('locked_home');
+    return [L(`bash: cd: ${target}: Permission denied`, 'err')];
+  }
   env.data.cwd = path === '' ? '/' : path;
   env.save();
   return [];
@@ -789,7 +797,7 @@ export function dariokartHelp(): Line[] {
     L('notes:'),
     L('  * the glitch cube is still present. driving into it crashes the run.'),
     L('  * crashing is, currently, the only way to exit a run.'),
-    L('  * the researcher used --speed 4.0 and --speed 12.0 (see ~/.bash_history).'),
+    L(`  * ${GATEWAY_USER} used --speed 4.0 and --speed 12.0 (see ~/.bash_history).`),
   ];
 }
 

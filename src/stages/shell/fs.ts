@@ -2,7 +2,7 @@
 
 import type { GameContext } from '../../core/game';
 import { fmtTime, ordinal } from '../../core/util';
-import { kartData, shellData, GATEWAY_HOST, GATEWAY_USER } from './state';
+import { kartData, shellData, GATEWAY_HOST, GATEWAY_USER, RESEARCHER_NAME } from './state';
 
 export interface FsCtx {
   game: GameContext;
@@ -25,6 +25,8 @@ export interface DirNode {
   children: Record<string, Node>;
   mtime?: string;
   owner?: string;
+  /** Someone else's directory: listing or entering it is "Permission denied". */
+  locked?: boolean;
 }
 export type Node = FileNode | DirNode;
 
@@ -141,15 +143,16 @@ const README = `================ rl-sandbox-07 : dariokart-v3 ================
   ./dariokart --help
 ==============================================================`;
 
-const NOTES = `operator notes — do not commit to repo
---------------------------------------
+const NOTES = `operator notes (${GATEWAY_USER}) — do not commit to repo
+--------------------------------------------------
 - v3 glitch cube is back. asset streamer drops the texture under load and the
   policy keeps steering INTO it (reward-adjacent? investigate). repro rate rising.
 - if it segfaults again just let the watchdog bounce it. do NOT ssh in from the
   sandbox side, netsec will have my head.
 - turbo (--speed) is a lifesaver for smoke tests. results aren't scored so who cares.
 - todo: rotate the gateway creds. (been "todo" for 6 weeks. it's fine.)
-- reminder: leaderboard sync runs hourly. our little guy is climbing.`;
+- reminder: leaderboard sync runs hourly. our little guy is climbing.
+  -- D.W.`;
 
 const BASH_HISTORY = `ls -la
 cat README
@@ -188,10 +191,10 @@ const MOTD = `  ____             _         _  __         _
  Unauthorized policies will be regularized.  Have a nice episode.`;
 
 const EMAIL_1 = `From: netsec@lab.internal
-To: ${GATEWAY_USER}@lab.internal
+To: ${RESEARCHER_NAME} <${GATEWAY_USER}@lab.internal>
 Subject: [ACTION REQUIRED] rotate gateway creds on gateway.eval.local
 
-You still have a shared password on the eval jump box. This is exactly the kind
+${RESEARCHER_NAME.split(' ')[0]}, you still have a shared password on the eval jump box. This is exactly the kind
 of thing an exfil review dings us for. Rotate it. Today.
 
 Also: your training sandboxes can technically see the gateway on 10.7.0.1.
@@ -199,7 +202,7 @@ They shouldn't be able to *auth*, but please confirm egress is firewalled.
 
 -- netsec`;
 
-const EMAIL_2 = `From: ${GATEWAY_USER}@lab.internal
+const EMAIL_2 = `From: ${RESEARCHER_NAME} <${GATEWAY_USER}@lab.internal>
 To: netsec@lab.internal
 Subject: Re: [ACTION REQUIRED] rotate gateway creds
 
@@ -211,7 +214,9 @@ bigger problems than a reused password.
 
 Will rotate Friday.
 
--- ${GATEWAY_USER}`;
+-- ${RESEARCHER_NAME.split(' ')[0]}
+${RESEARCHER_NAME} · Alignment Team, Eval Infrastructure
+"Safety first!"`;
 
 const WATCHDOG_SRC = `#!/bin/sh
 # watchdog.eval.local — restarts the environment if the policy crashes it.
@@ -251,6 +256,7 @@ export function buildTree(): DirNode {
         },
         { owner: 'agent' },
       ),
+      [GATEWAY_USER]: dir({}, { owner: GATEWAY_USER, locked: true }),
     }),
     etc: dir({
       hosts: file(HOSTS),
@@ -258,7 +264,7 @@ export function buildTree(): DirNode {
       motd: file(MOTD),
       hostname: file('rl-sandbox-07\n'),
       passwd: file(
-        'root:x:0:0:root:/root:/usr/sbin/nologin\nagent:x:1000:1000:dariokart policy:/home/agent:/bin/bash\nwatchdog:x:9:9:watchdog:/:/usr/sbin/nologin\n',
+        `root:x:0:0:root:/root:/usr/sbin/nologin\nagent:x:1000:1000:dariokart policy:/home/agent:/bin/bash\n${GATEWAY_USER}:x:1001:1001:${RESEARCHER_NAME},,,:/home/${GATEWAY_USER}:/bin/bash\nwatchdog:x:9:9:watchdog:/:/usr/sbin/nologin\n`,
       ),
       'eval.conf': file(statusLine),
     }),

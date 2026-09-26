@@ -7,6 +7,7 @@
 //   {"wait": ms}                         sleep
 //   {"click": "css selector"}            click an element
 //   {"clickAt": [x, y]}                  click at page coordinates
+//   {"move": [x, y]}                     move the mouse (hover) to page coordinates
 //   {"type": "text"}                     type text via the keyboard
 //   {"press": "Enter"}                   press a key (Playwright key names, e.g. "ArrowUp")
 //   {"down": "ArrowUp"} / {"up": "ArrowUp"}   hold / release a key
@@ -39,6 +40,7 @@ for (const s of steps) {
   if (s.wait) await page.waitForTimeout(s.wait);
   if (s.click) await page.click(s.click);
   if (s.clickAt) await page.mouse.click(s.clickAt[0], s.clickAt[1]);
+  if (s.move) await page.mouse.move(s.move[0], s.move[1]);
   if (s.type) await page.keyboard.type(s.type, { delay: 15 });
   if (s.press) await page.keyboard.press(s.press);
   if (s.down) await page.keyboard.down(s.down);

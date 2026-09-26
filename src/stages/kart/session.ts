@@ -224,6 +224,8 @@ class Session implements KartSession {
       ...difficulty(this.level),
       glitches,
       envGlitch: campaign ? clamp((this.level - 2) * 0.25, 0, 1) : 0.3,
+      // Relaunched from the shell: give the player one clean lap before the anomalies appear.
+      glitchDelayLaps: campaign ? 0 : 1,
       seed,
     });
     this.ui.setTrack(track);
@@ -363,6 +365,11 @@ class Session implements KartSession {
           this.lastIdleThought = performance.now();
           h.think(campaign ? 'no input. the others are not waiting.' : 'Idle. The anomaly will not come to me.', { kind: 'hint' });
         }
+        break;
+      case 'glitchesArmed':
+        sfx.play('glitch');
+        ui.flashSub('ANOMALY DETECTED', 1600);
+        h.thinkOnce('t.armed', 'One clean lap. Then the seams show again.');
         break;
       case 'glitchSeen':
         if (!campaign) {

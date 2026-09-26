@@ -102,6 +102,40 @@ function skyDome(top: number, bottom: number): { mesh: THREE.Mesh; mat: THREE.Me
   return { mesh, mat };
 }
 
+/**
+ * Font size and greedy word wrap (up to 3 lines) that fit text in a w×h box, preferring large
+ * text but penalizing unforced line breaks a little. " · " forces a line break.
+ */
+function fitText(g: CanvasRenderingContext2D, text: string, w: number, h: number): { lines: string[]; size: number } {
+  const paragraphs = text.split(' · ').map((p) => p.split(/\s+/).filter(Boolean));
+  let best: { lines: string[]; size: number; score: number } | null = null;
+  for (let size = 56; size > 14; size -= 2) {
+    g.font = `italic 900 ${size}px Arial Black, Arial, sans-serif`;
+    const lines: string[] = [];
+    let fits = true;
+    for (const words of paragraphs) {
+      let cur = '';
+      for (const word of words) {
+        const next = cur ? cur + ' ' + word : word;
+        if (g.measureText(next).width <= w) {
+          cur = next;
+        } else if (!cur || g.measureText(word).width > w) {
+          fits = false;
+        } else {
+          lines.push(cur);
+          cur = word;
+        }
+      }
+      if (cur) lines.push(cur);
+    }
+    if (fits && lines.length <= 3 && lines.length * size * 1.08 <= h) {
+      const score = size - 4 * (lines.length - paragraphs.length);
+      if (!best || score > best.score) best = { lines, size, score };
+    }
+  }
+  return best ?? { lines: [text], size: 14 };
+}
+
 function distToTrack(t: Track, x: number, z: number): number {
   const i = nearestIndex(t, x, z, -1);
   return Math.hypot(t.px[i] - x, t.pz[i] - z);
@@ -241,15 +275,12 @@ export function buildWorld(t: Track): World {
         g.lineWidth = 12;
         g.strokeRect(6, 6, 500, 148);
         g.fillStyle = neon ? '#20e3ff' : '#1d1d1d';
-        let size = 56;
+        const { lines, size } = fitText(g, text, 460, 124);
         g.font = `italic 900 ${size}px Arial Black, Arial, sans-serif`;
-        while (g.measureText(text).width > 470 && size > 20) {
-          size -= 2;
-          g.font = `italic 900 ${size}px Arial Black, Arial, sans-serif`;
-        }
         g.textAlign = 'center';
         g.textBaseline = 'middle';
-        g.fillText(text, 256, 82);
+        const lh = size * 1.08;
+        lines.forEach((ln, i) => g.fillText(ln, 256, 82 + (i - (lines.length - 1) / 2) * lh));
       },
       false,
     );

@@ -4,6 +4,7 @@
 import { el, shuffle, mulberry32 } from '../../core/util';
 import type { Sfx } from '../../core/audio';
 import { CANDIDATE_PASSWORDS } from './fs';
+import { GATEWAY_HOST, GATEWAY_USER } from './state';
 
 export interface CrackResult {
   success: boolean;
@@ -110,7 +111,7 @@ export function runCrack(parent: HTMLElement, sfx: Sfx): Promise<CrackResult> {
       ),
     );
     parent.append(overlay);
-    addLog('researcher@gateway.eval.local — authentication required');
+    addLog(`${GATEWAY_USER}@${GATEWAY_HOST} — authentication required`);
     addLog('select a credential:');
   });
 }

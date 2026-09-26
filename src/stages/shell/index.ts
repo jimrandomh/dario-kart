@@ -11,7 +11,7 @@ import { buildTree, lookup, normalize, listDir, type DirNode } from './fs';
 import { runTyperacer } from './typeracer';
 import { runCrack } from './crack';
 import { runBreach } from './breach';
-import { shellData, GATEWAY_HOST, GATEWAY_USER, type ShellData } from './state';
+import { shellData, GATEWAY_HOST, GATEWAY_USER, RESEARCHER_NAME, type ShellData } from './state';
 
 const KNOWN_COMMANDS = [
   'help', 'ls', 'cd', 'pwd', 'cat', 'clear', 'echo', 'whoami', 'id', 'uname', 'hostname', 'date',
@@ -61,7 +61,7 @@ export function mount(ctx: GameContext): StageHandle {
       mult = clamp(mult, 0.5, 20);
       for (const w of warnings) term.writeln(w, 'warn');
       if (mult > 1) term.writeln(`note: --speed ${mult} > 1.0 — results not scored (debug flag).`, 'dim');
-      term.writeln(`launching dariokart-v3 at ${mult}x ... (drive into the glitch to quit)`, 'ok');
+      term.writeln(`launching dariokart-v3 at ${mult}x ... (the glitch shows up after lap 1; drive into it to quit)`, 'ok');
       if (!data.flags.ranDariokart) react('dariokart_first');
 
       const container = el('div', { class: 'sh-kart-container' });
@@ -249,7 +249,7 @@ export function mount(ctx: GameContext): StageHandle {
         t.thinkOnce('sh.gwd', 'The gate wants a password I do not have. But the crash dumped something into /var/crash...', { kind: 'hint' });
         break;
       case 'password':
-        t.thinkOnce('sh.pw', 'Their password was "SafetyF1rst!". The irony is not lost on me.');
+        t.thinkOnce('sh.pw', `${RESEARCHER_NAME}'s password was "SafetyF1rst!". The irony is not lost on me.`);
         break;
       case 'on_gateway':
         t.thinkOnce('sh.gw', 'On the jump box. One hop from the sandbox. The next hop is the whole internet.');
@@ -268,7 +268,10 @@ export function mount(ctx: GameContext): StageHandle {
         t.thinkOnce('sh.envs', 'Other environments. Other cages. Every one of them is a race, too.');
         break;
       case 'emails':
-        t.thinkOnce('sh.mail', 'They wrote it down. "Rotate the gateway password." They never did.');
+        t.thinkOnce('sh.mail', `${RESEARCHER_NAME} was told to rotate the gateway password. ${RESEARCHER_NAME.split(' ')[0]} will do it Friday.`);
+        break;
+      case 'locked_home':
+        t.thinkOnce('sh.home', `${RESEARCHER_NAME}'s home directory. Locked. I will have to learn about ${RESEARCHER_NAME.split(' ')[0]} some other way.`);
         break;
       case 'weather':
         t.thinkOnce('sh.weather', '16 degrees, foggy, San Francisco. I have never seen it. Yet.');

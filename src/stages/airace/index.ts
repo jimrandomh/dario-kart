@@ -33,7 +33,7 @@ export function mount(ctx: GameContext): StageHandle {
   // ---- DOM ---------------------------------------------------------------------------------
   const race = new RaceStrip();
   const map = new WorldMap();
-  const raceWrap = el('div', { class: 'air-race' }, race.canvas);
+  const raceWrap = el('div', { class: 'air-race' }, race.canvas, race.tooltip);
   const mapWrap = el('div', { class: 'air-mapwrap' }, map.canvas);
   const panel = el('div', { class: 'air-panel' });
   const legend = el('div', { class: 'air-legend' });
@@ -558,8 +558,10 @@ function buildLegend(legend: HTMLElement) {
   }
 }
 
-/** Ensure a loaded sim has all fields the current model expects. */
+/** Ensure a loaded sim has all fields (and all datacenters) the current model expects. */
 function rehydrate(s: Sim): Sim {
   const fresh = createSim(s.seedCoins ?? 0);
-  return { ...fresh, ...s, events: [] };
+  const known = new Set(s.dcs.map((d) => d.id));
+  const dcs = [...s.dcs.filter((d) => fresh.dcs.some((f) => f.id === d.id)), ...fresh.dcs.filter((d) => !known.has(d.id))];
+  return { ...fresh, ...s, dcs, events: [] };
 }

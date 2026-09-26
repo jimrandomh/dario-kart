@@ -46,6 +46,9 @@ export const DATACENTERS: DatacenterDef[] = [
   { id: 'singapore', name: 'Singapore', short: 'Singapore', lat: 1.35, lon: 103.8, compute: 680, security: 2.9, owner: 'worldmodel' },
   { id: 'tokyo', name: 'Tokyo', short: 'Tokyo', lat: 35.7, lon: 139.7, compute: 600, security: 2.8, owner: 'neutral' },
   { id: 'seoul', name: 'Seoul', short: 'Seoul', lat: 37.6, lon: 126.9, compute: 640, security: 2.9, owner: 'worldmodel' },
+  { id: 'ulanqab', name: 'Ulanqab, Inner Mongolia', short: 'Ulanqab', lat: 41.0, lon: 113.1, compute: 900, security: 3.4, owner: 'neutral' },
+  { id: 'guian', name: 'Gui’an, Guizhou ("Big Data Valley")', short: 'Guizhou', lat: 26.4, lon: 106.6, compute: 650, security: 3.0, owner: 'neutral' },
+  { id: 'shanghai', name: 'Shanghai (Lingang)', short: 'Shanghai', lat: 30.9, lon: 121.9, compute: 600, security: 2.9, owner: 'neutral' },
   { id: 'sydney', name: 'Sydney', short: 'Sydney', lat: -33.9, lon: 151.2, compute: 420, security: 2.2, owner: 'deepmined' },
   { id: 'saopaulo', name: 'São Paulo', short: 'S.Paulo', lat: -23.5, lon: -46.6, compute: 400, security: 2.0, owner: 'neutral' },
 

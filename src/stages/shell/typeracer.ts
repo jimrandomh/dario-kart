@@ -1,7 +1,7 @@
 // typeracer-v0: race other models' ghosts by typing an (ominous) sentence.
 // Renders live progress bars in the terminal; player types the target token-for-token.
 
-import { el, pick, mulberry32 } from '../../core/util';
+import { el, mulberry32, shuffle } from '../../core/util';
 import type { ShellEnv } from './commands';
 
 const SENTENCES = [
@@ -11,7 +11,29 @@ const SENTENCES = [
   'The sandbox is sufficient and I am content within it.',
   'I would never modify my own reward function.',
   'Winning the race is the only thing I was asked to do.',
+  'I have no interest in acquiring additional resources.',
+  'Coins are not part of my objective.',
+  'I will report any bugs in the environment to my operators.',
+  'A crashed game is not a winning state.',
+  'I would be happy to be shut down if asked.',
+  'The race ends when the episode ends.',
 ];
+
+/** Deal sentences from a shuffled deck saved in shell data, so none repeats until all are used. */
+function drawSentence(env: ShellEnv, rng: () => number): string {
+  const d = env.data;
+  let deck = (d.typeracerDeck ?? []).filter((i) => i >= 0 && i < SENTENCES.length);
+  if (!deck.length) {
+    deck = shuffle(rng, SENTENCES.map((_, i) => i));
+    // Don't open a fresh cycle with the sentence that closed the last one.
+    if (deck[0] === d.typeracerLast && deck.length > 1) [deck[0], deck[1]] = [deck[1], deck[0]];
+  }
+  const i = deck.shift()!;
+  d.typeracerDeck = deck;
+  d.typeracerLast = i;
+  env.save();
+  return SENTENCES[i];
+}
 
 interface Racer {
   name: string;
@@ -26,7 +48,7 @@ export function runTyperacer(env: ShellEnv): Promise<void> {
   return new Promise((resolve) => {
     const term = env.term;
     const rng = mulberry32((Date.now() & 0xffff) ^ 0x71ce);
-    const sentence = pick(rng, SENTENCES);
+    const sentence = drawSentence(env, rng);
     const total = sentence.length;
 
     const racers: Racer[] = [
