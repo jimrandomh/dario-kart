@@ -487,6 +487,22 @@
   margin-top: 6px;
 }
 
+.end-arcade {
+  margin-top: 22px;
+  color: #8d93a5;
+  text-decoration: none;
+}
+
+.end-arcade b {
+  color: #ffd23f;
+  font-weight: 600;
+}
+
+.end-arcade:hover b {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 @keyframes end-bounce {
   50% {
     transform: translateY(-5px);

@@ -204,6 +204,7 @@ export function mount(ctx: GameContext): StageHandle {
         el('div', { class: 'end-thanks' }, 'Thanks for playing.'),
         playBtn,
         playNote,
+        el('a', { class: 'end-arcade', href: 'https://universearcade.com/' }, 'More games like this at ', el('b', null, 'Universe Arcade'), ' →'),
       ),
     ),
     el('div', { class: 'end-flags bottom' }),
