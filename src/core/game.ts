@@ -7,6 +7,7 @@ import { Music, STAGE_THEMES } from './music';
 import { clearSavedState, writeState, type GameState, type StageId } from './state';
 import { el } from './util';
 import { stageLoaders } from '../stages';
+import { trackStage } from './analytics';
 
 export interface StageHandle {
   /** Tear down everything the stage created: DOM, listeners, timers, animation frames, WebGL. */
@@ -91,6 +92,7 @@ export class Game implements GameContext {
 
   goto(stage: StageId, opts: GotoOptions = {}): void {
     this.state.stage = stage;
+    trackStage(this, stage);
     this.save();
     if (!opts.keepThoughts) this.hud.clearThoughts();
     void this.mountStage(stage);

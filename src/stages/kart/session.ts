@@ -5,6 +5,7 @@ import './kart.css';
 import * as THREE from 'three';
 import type { GameContext } from '../../core/game';
 import { getStageData } from '../../core/state';
+import { trackGameStart } from '../../core/analytics';
 import { clamp, el, fmtTime, mulberry32, ordinal } from '../../core/util';
 import { generateTrack } from './track';
 import { Race, planGlitches, BASE_MAX, type Controls, type ItemType, type RaceEvent } from './race';
@@ -267,6 +268,7 @@ class Session implements KartSession {
   private startFromTitle(): void {
     if (this.mode !== 'title') return;
     this.ctx.sfx.play('click');
+    trackGameStart(this.ctx);
     this.ui.hideOverlay();
     this.ui.setHudVisible(true);
     this.beginRace();

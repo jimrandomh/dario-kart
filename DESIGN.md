@@ -85,6 +85,8 @@ src/
     popups.ts             intervention cards (Block button + timer), modals, toasts
     audio.ts              Sfx: synthesized sound effects (WebAudio)
     util.ts               seeded RNG, el() DOM builder, fmtNum(), fmtTime(), ordinal()...
+    analytics.ts          Google Analytics landmark events (game_start, stage_reached, game_complete),
+                          once per game; never sent from the dev server or #debug= URLs
   stages/
     index.ts              stage registry (dynamic imports)
     kart/                 stage 1; also exports startKartSession() for the shell's turbo mode
