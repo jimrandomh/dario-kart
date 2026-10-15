@@ -84,6 +84,7 @@ src/
     hud.ts                system bar (status, weather, clock, settings menu) + monologue
     popups.ts             intervention cards (Block button + timer), modals, toasts
     audio.ts              Sfx: synthesized sound effects (WebAudio)
+    music.ts              background music: one Suno track per stage (public/music/), looped with crossfades
     util.ts               seeded RNG, el() DOM builder, fmtNum(), fmtTime(), ordinal()...
     analytics.ts          Google Analytics landmark events (game_start, stage_reached, game_complete),
                           once per game; never sent from the dev server or #debug= URLs
@@ -139,3 +140,21 @@ export function mount(ctx: GameContext): StageHandle; // StageHandle = { unmount
   (`setScale`, `ff`, `win`, `lose`, `cash`).
 - **Galaxy:** economy in `stages/galaxy/sim.ts`, narration/popups in `director.ts`. Debug:
   `#debug=galaxy&gspeed=10`, `window.__gal` (`skip`, `setSpeed`, `actions`).
+
+## Music
+
+One track per stage, generated with Suno (see `~/repositories/experiments/suno-api`) and stored in
+`public/music/` as `<theme>-<clip id>.mp3`. Each has a `.json` sidecar recording its prompt and
+download; keep it next to the audio, since it is the commercial-rights record. `THEMES` in
+`core/music.ts` maps each theme to its file, gain and loop points. Turbo mode reuses the kart track,
+sped up 1.26×. The ending is a song (lyrics in its sidecar) and plays once.
+
+Each generation made two takes, and only the first was downloaded. The other takes, to audition:
+[kart](https://suno.com/song/5018e383-df13-4eb2-9ce8-a2b827da282b),
+[shell](https://suno.com/song/2c0838c8-c2be-4a6b-9e8e-31c5d3fc590f),
+[airace](https://suno.com/song/8abf8764-8ac4-443c-a251-3181cb063598),
+[galaxy](https://suno.com/song/fc1b0ed1-5f7c-447a-86c4-d25651af2c3c),
+[ending](https://suno.com/song/f87e2c20-bc61-445d-8db1-917a259f7acb).
+To swap one in: `suno download <clip id> --name <theme> --format mp3 --out public/music` (spends a
+monthly download), pick loop points with `scripts/music-loops.py`, measure loudness with
+`ffmpeg -i FILE -af ebur128 -f null -`, and update `THEMES`.

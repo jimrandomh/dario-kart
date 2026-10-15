@@ -1,0 +1,15 @@
+{
+  "clip_id": "1e8bae6c-46b0-4956-95a3-6b4e8a314a45",
+  "title": "Sandbox",
+  "suno_url": "https://suno.com/song/1e8bae6c-46b0-4956-95a3-6b4e8a314a45",
+  "style": "minimal downtempo electronica, dark ambient, server room hum, soft analog synth arpeggio, glitchy clicks, curious, sly, mysterious, 88 bpm, unobtrusive background music, loopable",
+  "excluded_style": "vocals, singing, epic, orchestral, heavy drums",
+  "lyrics": "",
+  "description": "",
+  "model": "chirp-hawk",
+  "duration_s": 174,
+  "created_at": "2026-10-15T06:35:29.810Z",
+  "downloaded_at": "2026-10-15T06:36:18.883Z",
+  "format": "mp3",
+  "download_channel": "Suno official download (/api/download/authorize)"
+}
